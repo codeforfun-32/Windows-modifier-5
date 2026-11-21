@@ -1,0 +1,317 @@
+import { Theme } from "../styles/themes.slint";
+import { Icons } from "../styles/icons.slint";
+import { Icon, Btn } from "controls.slint";
+
+component Bar inherits Rectangle {
+    in property <float> value: 0;
+    in property <color> tint: Theme.accent;
+
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.track;
+
+    Rectangle {
+        x: 0px;
+        width: parent.width * Math.clamp(root.value, 0, 1);
+        height: parent.height;
+        border-radius: 3px;
+        background: root.tint;
+        animate width { duration: 300ms; easing: ease-out; }
+    }
+}
+
+component StatCard inherits Rectangle {
+    in property <string> d;
+    in property <string> label;
+    in property <color> tint;
+
+    border-radius: 18px;
+    background: Theme.card;
+
+    Icon {
+        x: 14px;
+        y: 13px;
+        width: 15px;
+        height: 15px;
+        d: root.d;
+        tint: root.tint;
+    }
+    Text {
+        x: 36px;
+        y: 10px;
+        width: parent.width - 48px;
+        height: 20px;
+        text: root.label;
+        color: root.tint;
+        font-size: 11px;
+        font-weight: 800;
+        vertical-alignment: center;
+    }
+
+    @children
+}
+
+export component SystemPage inherits Rectangle {
+    in property <float> cpu: 0;
+    in property <float> ram: 0;
+    in property <string> ram-text: "--";
+    in property <string> ram-total: "";
+    in property <string> down: "--";
+    in property <string> up: "--";
+    in property <float> batt: 0;
+    in property <bool> batt-present: false;
+    in property <bool> charging: false;
+    in property <string> storage-text: "--";
+    in property <string> storage-total: "";
+    in property <float> storage-used: 0;
+    in property <string> uptime: "--";
+    in property <[float]> hist: [];
+    callback optimize();
+
+    property <length> cw: (root.width - 20px) / 3;
+    property <length> ch: (root.height - 52px) / 2;
+
+    // CPU
+    StatCard {
+        x: 0px;
+        y: 0px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.chip;
+        label: "CPU";
+        tint: #46a8ff;
+
+        Text {
+            x: 14px;
+            y: 34px;
+            width: parent.width - 28px;
+            height: 34px;
+            text: "\{Math.round(root.cpu * 100)}%";
+            color: Theme.text;
+            font-size: 26px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        for v[i] in root.hist : Rectangle {
+            x: parent.width - 14px - (root.hist.length - i) * 7px;
+            width: 5px;
+            height: Math.max(3px, v * 28px);
+            y: parent.height - 12px - self.height;
+            border-radius: 2px;
+            background: #46a8ff;
+            opacity: 0.35 + 0.65 * i / Math.max(1, root.hist.length);
+        }
+    }
+
+    // Memory
+    StatCard {
+        x: root.cw + 10px;
+        y: 0px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.ram;
+        label: "MEMORY";
+        tint: #b66bff;
+
+        Text {
+            x: 14px;
+            y: 34px;
+            width: parent.width - 28px;
+            height: 34px;
+            text: root.ram-text;
+            color: Theme.text;
+            font-size: 24px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Bar {
+            x: 14px;
+            y: parent.height - 34px;
+            width: parent.width - 28px;
+            value: root.ram;
+            tint: #b66bff;
+        }
+        Text {
+            x: 14px;
+            y: parent.height - 24px;
+            width: parent.width - 28px;
+            height: 18px;
+            text: root.ram-total;
+            color: Theme.text-dim;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+    }
+
+    // Network
+    StatCard {
+        x: 2 * (root.cw + 10px);
+        y: 0px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.globe;
+        label: "NETWORK";
+        tint: #2fd1a0;
+
+        Icon {
+            x: 14px;
+            y: 40px;
+            width: 14px;
+            height: 14px;
+            d: Icons.down;
+            tint: #2fd1a0;
+        }
+        Text {
+            x: 34px;
+            y: 34px;
+            width: parent.width - 44px;
+            height: 26px;
+            text: root.down;
+            color: Theme.text;
+            font-size: 18px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Icon {
+            x: 14px;
+            y: 68px;
+            width: 14px;
+            height: 14px;
+            d: Icons.up;
+            tint: Theme.text-dim;
+        }
+        Text {
+            x: 34px;
+            y: 64px;
+            width: parent.width - 44px;
+            height: 22px;
+            text: root.up;
+            color: Theme.text-dim;
+            font-size: 13px;
+            vertical-alignment: center;
+        }
+    }
+
+    // Storage
+    StatCard {
+        x: 0px;
+        y: root.ch + 10px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.hdd;
+        label: "STORAGE";
+        tint: #ff7a59;
+
+        Text {
+            x: 14px;
+            y: 34px;
+            width: parent.width - 28px;
+            height: 34px;
+            text: root.storage-text;
+            color: Theme.text;
+            font-size: 20px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Bar {
+            x: 14px;
+            y: parent.height - 34px;
+            width: parent.width - 28px;
+            value: root.storage-used;
+            tint: #ff7a59;
+        }
+        Text {
+            x: 14px;
+            y: parent.height - 24px;
+            width: parent.width - 28px;
+            height: 18px;
+            text: root.storage-total;
+            color: Theme.text-dim;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+    }
+
+    // Battery
+    StatCard {
+        x: root.cw + 10px;
+        y: root.ch + 10px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.battery;
+        label: "BATTERY";
+        tint: #3fd16b;
+
+        Text {
+            x: 14px;
+            y: 34px;
+            width: parent.width - 28px;
+            height: 34px;
+            text: root.batt-present ? "\{Math.round(root.batt * 100)}%" : "No battery";
+            color: Theme.text;
+            font-size: root.batt-present ? 24px : 16px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        if root.batt-present : Bar {
+            x: 14px;
+            y: parent.height - 34px;
+            width: parent.width - 28px;
+            value: root.batt;
+            tint: #3fd16b;
+        }
+        if root.batt-present : Text {
+            x: 14px;
+            y: parent.height - 24px;
+            width: parent.width - 28px;
+            height: 18px;
+            text: root.charging ? "Charging" : "On battery";
+            color: Theme.text-dim;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+    }
+
+    // Uptime
+    StatCard {
+        x: 2 * (root.cw + 10px);
+        y: root.ch + 10px;
+        width: root.cw;
+        height: root.ch;
+        d: Icons.clock;
+        label: "UPTIME";
+        tint: #ffc83d;
+
+        Text {
+            x: 14px;
+            y: 34px;
+            width: parent.width - 28px;
+            height: 34px;
+            text: root.uptime;
+            color: Theme.text;
+            font-size: 24px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Text {
+            x: 14px;
+            y: parent.height - 24px;
+            width: parent.width - 28px;
+            height: 18px;
+            text: "since last restart";
+            color: Theme.text-dim;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+    }
+
+    Btn {
+        x: 0px;
+        y: parent.height - 40px;
+        width: parent.width;
+        height: 40px;
+        d: Icons.rocket;
+        text: "Optimize memory";
+        clicked => { root.optimize(); }
+    }
+}

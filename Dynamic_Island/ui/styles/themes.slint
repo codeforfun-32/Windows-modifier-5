@@ -1,0 +1,24 @@
+// Colours of the whole island. Rust (src/look.rs) fills these in from the
+// "Surface" and "Accent colour" settings, so every widget follows the chosen theme.
+export global Theme {
+    in-out property <color> surface: #060608;
+    in-out property <color> card: #ffffff0d;
+    in-out property <color> card-hi: #ffffff1a;
+    in-out property <color> border: #ffffff1f;
+    in-out property <color> sheen-top: #ffffff00;
+    in-out property <color> chip: #ffffff14;
+    in-out property <color> chip-active: #ffffff2e;
+    in-out property <color> track: #ffffff22;
+
+    in-out property <color> text: #f5f5f7;
+    in-out property <color> text-dim: #f5f5f7a0;
+    in-out property <color> accent: #7cf0c9;
+    in-out property <color> on-accent: #0a0a0d;
+    // bright fill used by sliders and the big play button
+    in-out property <color> fill: #f5f5f7;
+    in-out property <color> on-fill: #0a0a0d;
+    in-out property <color> danger: #ff7a7a;
+
+    in-out property <color> mascot: #ffd479;
+    in-out property <color> mascot-ink: #2b2014;
+}

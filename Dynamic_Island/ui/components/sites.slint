@@ -1,0 +1,151 @@
+import { Theme } from "../styles/themes.slint";
+import { Icons } from "../styles/icons.slint";
+import { Icon } from "controls.slint";
+import { Scroller } from "scroller.slint";
+
+export struct SiteItem {
+    name: string,
+    url: string,
+    letter: string,
+    icon: image,
+    has-icon: bool,
+}
+
+export component SiteGrid inherits Rectangle {
+    in property <[SiteItem]> sites;
+    callback opened(int);
+    callback removed(int);
+    callback add-requested();
+
+    // 8 tiles per row
+    property <length> tw: root.width / 8;
+
+    Scroller {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        content-height: Math.ceil((root.sites.length + 1) / 8) * 104px;
+
+        for s[i] in root.sites : Rectangle {
+            x: Math.mod(i, 8) * root.tw;
+            y: Math.floor(i / 8) * 104px;
+            width: root.tw;
+            height: 100px;
+
+            Rectangle {
+                x: (parent.width - 70px) / 2;
+                y: 4px;
+                width: 70px;
+                height: 70px;
+                border-radius: 22px;
+                background: ta.has-hover ? Theme.card-hi : Theme.card;
+                animate background { duration: 140ms; }
+
+                if s.has-icon : Image {
+                    x: 17px;
+                    y: 17px;
+                    width: 36px;
+                    height: 36px;
+                    source: s.icon;
+                    image-fit: contain;
+                }
+                if !s.has-icon : Text {
+                    width: parent.width;
+                    height: parent.height;
+                    text: s.letter;
+                    color: Theme.text;
+                    font-size: 26px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.opened(i); }
+                }
+
+                // remove button inside the tile, shows on hover
+                Rectangle {
+                    x: parent.width - 24px;
+                    y: 5px;
+                    width: 19px;
+                    height: 19px;
+                    border-radius: 9.5px;
+                    background: del.has-hover ? #ff5a5a : Theme.danger;
+                    opacity: (ta.has-hover || del.has-hover) ? 1 : 0;
+                    visible: self.opacity > 0.01;
+                    animate opacity { duration: 120ms; }
+
+                    Icon {
+                        x: 5px;
+                        y: 5px;
+                        width: 9px;
+                        height: 9px;
+                        d: Icons.close;
+                        tint: #ffffff;
+                    }
+                    del := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.removed(i); }
+                    }
+                }
+            }
+            Text {
+                x: 2px;
+                y: 78px;
+                width: parent.width - 4px;
+                height: 16px;
+                text: s.name;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        if root.sites.length < 10 : Rectangle {
+            x: Math.mod(root.sites.length, 8) * root.tw;
+            y: Math.floor(root.sites.length / 8) * 104px;
+            width: root.tw;
+            height: 100px;
+
+            Rectangle {
+                x: (parent.width - 70px) / 2;
+                y: 4px;
+                width: 70px;
+                height: 70px;
+                border-radius: 22px;
+                background: addta.has-hover ? Theme.card-hi : Theme.card;
+                border-width: 1px;
+                border-color: Theme.border;
+                animate background { duration: 140ms; }
+
+                Icon {
+                    x: 22px;
+                    y: 22px;
+                    width: 26px;
+                    height: 26px;
+                    d: Icons.plus;
+                    tint: Theme.accent;
+                }
+                addta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.add-requested(); }
+                }
+            }
+            Text {
+                x: 2px;
+                y: 78px;
+                width: parent.width - 4px;
+                height: 16px;
+                text: "Paste link";
+                color: Theme.text-dim;
+                font-size: 12px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

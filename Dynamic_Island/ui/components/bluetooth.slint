@@ -1,0 +1,218 @@
+import { Theme } from "../styles/themes.slint";
+import { Icons } from "../styles/icons.slint";
+import { Icon, Toggle, Ring, RoundBtn } from "controls.slint";
+import { Scroller } from "scroller.slint";
+import { QuickState, QIcons } from "quick_settings.slint";
+
+export struct BtItem {
+    name: string,
+    letter: string,
+    connected: bool,
+    // 0..100, or -1 when the device does not report it
+    battery: int,
+}
+
+export component BluetoothPage inherits Rectangle {
+    in property <[BtItem]> devices: [];
+    callback refresh();
+
+    // ---- top card ----
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: 58px;
+        border-radius: 18px;
+        background: Theme.card;
+
+        Rectangle {
+            x: 12px;
+            y: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 17px;
+            background: QuickState.bt-on ? Theme.accent : Theme.chip-active;
+
+            Icon {
+                x: 8px;
+                y: 8px;
+                width: 18px;
+                height: 18px;
+                d: QIcons.bluetooth;
+                tint: QuickState.bt-on ? Theme.on-accent : Theme.text;
+            }
+        }
+        Text {
+            x: 58px;
+            y: 9px;
+            width: 140px;
+            height: 22px;
+            text: "Bluetooth";
+            color: Theme.text;
+            font-size: 15px;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+        Text {
+            x: 58px;
+            y: 31px;
+            width: parent.width - 240px;
+            height: 18px;
+            text: QuickState.bt-on ? (root.devices.length == 0 ? "No paired devices found yet" : "Ready to connect") : "Bluetooth is off";
+            color: Theme.text-dim;
+            font-size: 12px;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+
+        RoundBtn {
+            x: parent.width - 170px;
+            y: 11px;
+            width: 36px;
+            height: 36px;
+            d: Icons.refresh;
+            glyph: 16px;
+            clicked => { root.refresh(); }
+        }
+        RoundBtn {
+            x: parent.width - 126px;
+            y: 11px;
+            width: 36px;
+            height: 36px;
+            d: Icons.sliders;
+            glyph: 16px;
+            clicked => { QuickState.open-setting("ms-settings:bluetooth"); }
+        }
+        Toggle {
+            x: parent.width - 70px;
+            y: 16px;
+            on: QuickState.bt-on;
+            toggled(v) => { QuickState.set-bluetooth(v); QuickState.bt-on = v; }
+        }
+    }
+
+    Text {
+        x: 4px;
+        y: 68px;
+        width: 200px;
+        height: 18px;
+        text: "SAVED DEVICES";
+        color: Theme.text-dim;
+        font-size: 11px;
+        font-weight: 700;
+        vertical-alignment: center;
+    }
+    Text {
+        x: parent.width - 204px;
+        y: 68px;
+        width: 200px;
+        height: 18px;
+        text: "\{root.devices.length} paired";
+        color: Theme.text-dim;
+        font-size: 11px;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+
+    Scroller {
+        x: 0px;
+        y: 92px;
+        width: parent.width;
+        height: parent.height - 92px;
+        content-height: root.devices.length * 60px;
+
+        for dev[i] in root.devices : Rectangle {
+            x: 0px;
+            y: i * 60px;
+            width: parent.width;
+            height: 54px;
+            border-radius: 16px;
+            background: Theme.card;
+
+            Rectangle {
+                x: 12px;
+                y: 9px;
+                width: 36px;
+                height: 36px;
+                border-radius: 18px;
+                background: dev.connected ? Theme.fill : Theme.chip-active;
+
+                Icon {
+                    x: 9px;
+                    y: 9px;
+                    width: 18px;
+                    height: 18px;
+                    d: Icons.headphones;
+                    tint: dev.connected ? Theme.on-fill : Theme.text;
+                }
+            }
+            Text {
+                x: 60px;
+                y: 8px;
+                width: parent.width - 200px;
+                height: 20px;
+                text: dev.name;
+                color: Theme.text;
+                font-size: 14px;
+                font-weight: 700;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+            Text {
+                x: 60px;
+                y: 28px;
+                width: parent.width - 200px;
+                height: 18px;
+                text: dev.connected ? "Connected" : "Not connected";
+                color: dev.connected ? Theme.accent : Theme.text-dim;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+
+            if dev.connected && dev.battery >= 0 : Text {
+                x: parent.width - 120px;
+                y: 0px;
+                width: 56px;
+                height: parent.height;
+                text: "\{dev.battery}%";
+                color: Theme.text;
+                font-size: 12px;
+                font-weight: 700;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+            if dev.connected && dev.battery >= 0 : Ring {
+                x: parent.width - 52px;
+                y: 17px;
+                width: 20px;
+                height: 20px;
+                value: dev.battery / 100;
+                tint: dev.battery < 20 ? Theme.danger : Theme.accent;
+            }
+            if !dev.connected : Rectangle {
+                x: parent.width - 100px;
+                y: 12px;
+                width: 86px;
+                height: 30px;
+                border-radius: 10px;
+                background: cn.has-hover ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.18);
+                animate background { duration: 120ms; }
+
+                Text {
+                    width: parent.width;
+                    height: parent.height;
+                    text: "Connect";
+                    color: Theme.accent;
+                    font-size: 12px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                cn := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { QuickState.open-setting("ms-settings:bluetooth"); }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,144 @@
+import { Theme } from "../styles/themes.slint";
+import { Icons } from "../styles/icons.slint";
+import { RoundBtn, Btn } from "controls.slint";
+
+export struct CalCell {
+    day: int,
+    in-month: bool,
+    today: bool,
+}
+
+export global CalIcon {
+    out property <string> d: "M 4 6 L 20 6 L 20 20 L 4 20 Z M 4 10 L 20 10 M 8 3 L 8 7 M 16 3 L 16 7";
+}
+
+export component CalendarView inherits Rectangle {
+    in property <[CalCell]> cells;
+    in property <string> title;
+    in property <int> today-day: 1;
+    in property <string> today-name;
+    callback step(int);
+    callback go-today();
+
+    property <length> lw: 210px;
+    property <length> gw: root.width - root.lw - 16px;
+    property <length> rh: (root.height - 26px) / 6;
+
+    // ---- left: today ----
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: root.lw;
+        height: parent.height;
+        border-radius: 20px;
+        background: Theme.card;
+
+        Text {
+            x: 18px;
+            y: 16px;
+            width: parent.width - 36px;
+            height: 20px;
+            text: root.today-name;
+            color: Theme.accent;
+            font-size: 14px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Text {
+            x: 18px;
+            y: 36px;
+            width: parent.width - 36px;
+            height: 70px;
+            text: "\{root.today-day}";
+            color: Theme.text;
+            font-size: 60px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+        Text {
+            x: 18px;
+            y: 108px;
+            width: parent.width - 36px;
+            height: 22px;
+            text: root.title;
+            color: Theme.text-dim;
+            font-size: 14px;
+            font-weight: 600;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+        RoundBtn {
+            x: 18px;
+            y: parent.height - 56px;
+            width: 36px;
+            height: 36px;
+            d: Icons.chev-left;
+            glyph: 16px;
+            clicked => { root.step(-1); }
+        }
+        Btn {
+            x: 62px;
+            y: parent.height - 56px;
+            width: 82px;
+            height: 36px;
+            text: "Today";
+            clicked => { root.go-today(); }
+        }
+        RoundBtn {
+            x: 152px;
+            y: parent.height - 56px;
+            width: 36px;
+            height: 36px;
+            d: Icons.chev-right;
+            glyph: 16px;
+            clicked => { root.step(1); }
+        }
+    }
+
+    // ---- right: month grid ----
+    Rectangle {
+        x: root.lw + 16px;
+        y: 0px;
+        width: root.gw;
+        height: parent.height;
+
+        for d[i] in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : Text {
+            x: i * (parent.width / 7);
+            y: 0px;
+            width: parent.width / 7;
+            height: 22px;
+            text: d;
+            color: Theme.text-dim;
+            font-size: 11px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        for c[i] in root.cells : Rectangle {
+            x: Math.mod(i, 7) * (parent.width / 7);
+            y: 26px + Math.floor(i / 7) * root.rh;
+            width: parent.width / 7;
+            height: root.rh;
+
+            if c.today : Rectangle {
+                x: (parent.width - 34px) / 2;
+                y: (parent.height - 30px) / 2;
+                width: 34px;
+                height: 30px;
+                border-radius: 15px;
+                background: Theme.accent;
+            }
+            Text {
+                width: parent.width;
+                height: parent.height;
+                text: "\{c.day}";
+                color: c.today ? Theme.on-accent : (c.in-month ? Theme.text : Theme.text-dim.with-alpha(0.4));
+                font-size: 14px;
+                font-weight: c.today ? 800 : 500;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

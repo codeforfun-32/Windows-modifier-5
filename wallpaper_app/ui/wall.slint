@@ -1,0 +1,34 @@
+export component WallWindow inherits Window {
+    no-frame: true;
+    background: black;
+    title: "Dynamic Island Wallpaper";
+    preferred-width: 800px;
+    preferred-height: 600px;
+
+    in property <image> frame;
+    in property <bool> has-frame: false;
+    // 0 = Fill, 1 = Fit, 2 = Stretch, 3 = Center
+    in property <int> fit: 0;
+    // 0 = no darkening, 0.8 = very dark
+    in property <float> dim: 0;
+
+    Rectangle {
+        width: root.width;
+        height: root.height;
+        background: black;
+    }
+
+    if root.has-frame : Image {
+        width: root.width;
+        height: root.height;
+        source: root.frame;
+        image-fit: root.fit == 0 ? ImageFit.cover : (root.fit == 1 ? ImageFit.contain : (root.fit == 2 ? ImageFit.fill : ImageFit.preserve));
+    }
+
+    Rectangle {
+        width: root.width;
+        height: root.height;
+        background: black;
+        opacity: root.dim;
+    }
+}

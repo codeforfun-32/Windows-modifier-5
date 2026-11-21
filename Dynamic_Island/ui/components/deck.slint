@@ -1,0 +1,179 @@
+import { Theme } from "../styles/themes.slint";
+import { Icons } from "../styles/icons.slint";
+import { Icon } from "controls.slint";
+import { NotifColors } from "notifs.slint";
+import { QIcons } from "quick_settings.slint";
+
+export struct DeckSlot {
+    name: string,
+    letter: string,
+    used: bool,
+    hue: int,
+}
+
+component BigButton inherits Rectangle {
+    in property <string> d;
+    in property <string> text;
+    in property <color> tint: Theme.text;
+    callback clicked();
+
+    height: 56px;
+    border-radius: 18px;
+    background: ta.has-hover ? Theme.card-hi : Theme.card;
+    animate background { duration: 120ms; }
+
+    property <length> content-w: 30px + lbl.preferred-width;
+
+    Icon {
+        x: (root.width - root.content-w) / 2;
+        y: (root.height - 22px) / 2;
+        width: 22px;
+        height: 22px;
+        d: root.d;
+        tint: root.tint;
+    }
+    lbl := Text {
+        x: (root.width - root.content-w) / 2 + 30px;
+        y: 0px;
+        width: self.preferred-width;
+        height: parent.height;
+        text: root.text;
+        color: Theme.text;
+        font-size: 15px;
+        font-weight: 700;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component DeckPage inherits Rectangle {
+    in property <[DeckSlot]> slots: [];
+    // 0 screenshot, 1 snip, 2 record
+    callback action(int);
+    callback slot-clicked(int);
+    callback slot-removed(int);
+
+    property <length> bw: (root.width - 24px) / 3;
+    property <length> sw: root.width / 6;
+
+    BigButton {
+        x: 0px;
+        y: 0px;
+        width: root.bw;
+        d: QIcons.camera;
+        text: "Screenshot";
+        clicked => { root.action(0); }
+    }
+    BigButton {
+        x: root.bw + 12px;
+        y: 0px;
+        width: root.bw;
+        d: Icons.scissors;
+        text: "Snip";
+        clicked => { root.action(1); }
+    }
+    BigButton {
+        x: 2 * (root.bw + 12px);
+        y: 0px;
+        width: root.bw;
+        d: "M 6 12 A 6 6 0 1 0 18 12 A 6 6 0 1 0 6 12";
+        text: "Record";
+        tint: #ff4d4d;
+        clicked => { root.action(2); }
+    }
+
+    Text {
+        x: 4px;
+        y: 70px;
+        width: 400px;
+        height: 18px;
+        text: "QUICK LAUNCH";
+        color: Theme.text-dim;
+        font-size: 11px;
+        font-weight: 700;
+        vertical-alignment: center;
+    }
+
+    for s[i] in root.slots : Rectangle {
+        x: i * root.sw;
+        y: 96px;
+        width: root.sw;
+        height: 110px;
+
+        Rectangle {
+            x: (parent.width - 76px) / 2;
+            y: 0px;
+            width: 76px;
+            height: 76px;
+            border-radius: 24px;
+            background: s.used ? NotifColors.list[s.hue] : (ta.has-hover ? Theme.card-hi : Theme.card);
+            border-width: s.used ? 0px : 2px;
+            border-color: Theme.border;
+            animate background { duration: 140ms; }
+
+            if s.used : Text {
+                width: parent.width;
+                height: parent.height;
+                text: s.letter;
+                color: #ffffff;
+                font-size: 30px;
+                font-weight: 800;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            if !s.used : Icon {
+                x: 26px;
+                y: 26px;
+                width: 24px;
+                height: 24px;
+                d: Icons.plus;
+                tint: Theme.text-dim;
+            }
+            ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.slot-clicked(i); }
+            }
+
+            if s.used : Rectangle {
+                x: parent.width - 24px;
+                y: 5px;
+                width: 19px;
+                height: 19px;
+                border-radius: 9.5px;
+                background: del.has-hover ? #ff5a5a : Theme.danger;
+                opacity: (ta.has-hover || del.has-hover) ? 1 : 0;
+                visible: self.opacity > 0.01;
+                animate opacity { duration: 120ms; }
+
+                Icon {
+                    x: 5px;
+                    y: 5px;
+                    width: 9px;
+                    height: 9px;
+                    d: Icons.close;
+                    tint: #ffffff;
+                }
+                del := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.slot-removed(i); }
+                }
+            }
+        }
+        Text {
+            x: 2px;
+            y: 82px;
+            width: parent.width - 4px;
+            height: 18px;
+            text: s.used ? s.name : "Add";
+            color: Theme.text;
+            font-size: 12px;
+            font-weight: 600;
+            overflow: elide;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}

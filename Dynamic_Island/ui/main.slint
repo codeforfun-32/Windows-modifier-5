@@ -1,0 +1,810 @@
+// ui/main.slint  -  the whole Dynamic Island window
+import { Theme } from "styles/themes.slint";
+import { Icons } from "styles/icons.slint";
+import { MascotView } from "components/mascot_view.slint";
+import { MusicPage, SourcePicker, SourceItem } from "components/media.slint";
+import { HomePage } from "components/home.slint";
+import { ClipboardPage, ClipItem } from "components/clipboard.slint";
+import { QuickSettings, QuickState, QIcons } from "components/quick_settings.slint";
+import { BluetoothPage, BtItem } from "components/bluetooth.slint";
+import { FocusPage, TaskItem } from "components/focus.slint";
+import { WeatherPage, WxItem } from "components/weather.slint";
+import { SystemPage } from "components/system.slint";
+import { NotifList, NotifItem, NotifColors } from "components/notifs.slint";
+import { SiteGrid, SiteItem } from "components/sites.slint";
+import { CalendarView, CalCell, CalIcon } from "components/calendar.slint";
+import { DeckPage, DeckSlot } from "components/deck.slint";
+import { Ticker } from "components/ticker.slint";
+import { IconTab, Page, Icon, Ring, WxIcon } from "components/controls.slint";
+
+export { SourceItem, NotifItem, SiteItem, QuickState, CalCell, ClipItem, WxItem, BtItem, TaskItem, DeckSlot, Theme }
+
+export component MainWindow inherits Window {
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    title: "Dynamic Island";
+    preferred-width: 900px;
+    preferred-height: 420px;
+
+    // ---------- look (set from the settings by src/look.rs) ----------
+    // 0 notch, 1 pill, 2 floating
+    in property <int> shape: 1;
+    in property <length> top-gap: 8px;
+    // 0 sharp, 1 rounded, 2 pill
+    in property <int> corner-style: 1;
+    in property <length> idle-w: 190px;
+    in property <length> idle-h: 36px;
+    in property <length> open-w: 780px;
+    in property <length> open-h: 336px;
+    in property <float> speed: 1.0;
+    // 0 centre, 1 left, 2 right
+    in property <int> dock: 0;
+    in property <bool> show-art: true;
+    in property <bool> show-progress: true;
+    in property <bool> music-tint: true;
+    // 0 mascot, 1 now playing, 2 clock, 3 nothing
+    in property <int> idle-mode: 0;
+    in property <int> viz-style: 0;
+    in property <bool> viz-on: true;
+    in property <int> progress-style: 0;
+    in property <bool> live-timer: true;
+    in property <float> edge-margin-px: 24;
+    // 0 never tuck, 1 tuck while another app is open, 2 always tucked until hovered
+    in property <int> tuck-mode: 1;
+    in property <float> open-delay-ms: 0;
+    in property <bool> hide-capture: false;
+    in property <float> toast-ms: 3000;
+    in property <[int]> tab-ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    in property <[DeckSlot]> deck-slots: [];
+
+    // ---------- state ----------
+    in-out property <bool> expanded: false;
+    in-out property <int> page: 0;
+    in-out property <int> mood: 0;
+    in-out property <float> look-x: 0;
+    in-out property <float> look-y: 0;
+    in-out property <bool> source-menu: false;
+    in-out property <bool> playing: false;
+    in-out property <string> ticker-text: "";
+    in-out property <string> ticker-app: "";
+    in-out property <string> ticker-body: "";
+    in-out property <string> ticker-letter: "";
+    in-out property <int> ticker-hue: 0;
+    in-out property <bool> ticker-active: false;
+    in-out property <string> track-title: "";
+    in-out property <string> track-artist: "";
+    in-out property <string> source-name: "";
+    in-out property <bool> spec-pill: false;
+    in-out property <int> notif-unread: 0;
+    in-out property <bool> hidden: false;
+    in-out property <bool> pinned: false;
+    in-out property <bool> typing: false;
+    in-out property <int> clip-filter: 0;
+
+    in property <[SourceItem]> sources: [];
+    in property <bool> has-media: false;
+    in property <float> progress: 0;
+    in property <string> pos-text: "0:00";
+    in property <string> dur-text: "--:--";
+    in property <[ClipItem]> clips: [];
+    in property <[float]> viz: [];
+    in property <[NotifItem]> notifs: [];
+    in property <[SiteItem]> sites: [];
+    in property <[BtItem]> bt-devices: [];
+    in property <string> bt-name: "";
+    in property <int> bt-battery: -1;
+    in property <[TaskItem]> tasks: [];
+    in property <int> tasks-done: 0;
+    in property <[CalCell]> cal-cells: [];
+    in property <string> cal-title: "";
+    in property <int> cal-today-day: 1;
+    in property <string> cal-today-name: "";
+    in property <string> clock-time: "";
+    in property <string> clock-date: "";
+
+    in property <bool> weather-ready: false;
+    in property <string> weather-city: "";
+    in property <string> weather-temp: "";
+    in property <string> weather-desc: "";
+    in property <string> weather-hilo: "";
+    in property <string> weather-humidity: "";
+    in property <string> weather-wind: "";
+    in property <string> weather-rain: "";
+    in property <string> weather-sunset: "";
+    in property <int> weather-kind: 2;
+    in property <[WxItem]> weather-hours: [];
+    in property <[WxItem]> weather-days: [];
+
+    in property <float> spec-cpu: 0;
+    in property <float> spec-ram: 0;
+    in property <string> spec-ram-text: "";
+    in property <string> spec-ram-total: "";
+    in property <string> spec-down: "--";
+    in property <string> spec-up: "--";
+    in property <string> spec-text: "";
+    in property <float> spec-batt: 0;
+    in property <bool> spec-batt-present: false;
+    in property <bool> spec-charging: false;
+    in property <string> spec-storage-text: "--";
+    in property <string> spec-storage-total: "";
+    in property <float> spec-storage-used: 0;
+    in property <string> spec-uptime: "--";
+    in property <[float]> spec-hist: [];
+
+    in property <image> media-art;
+    in property <color> media-ambient-color: #18181b;
+
+    // ---------- focus timer (runs here so it keeps going on every tab) ----------
+    in-out property <float> f-focus-min: 25;
+    in-out property <float> f-break-min: 5;
+    in-out property <int> f-mode: 0;
+    in-out property <float> f-left: 1500;
+    in-out property <bool> f-running: false;
+
+    // ---------- numbers Rust needs ----------
+    out property <length> island-x: island.x;
+    out property <length> island-w: island.width;
+    out property <length> island-h: island.height;
+    out property <length> island-y: island.y;
+    out property <length> mascot-cx: island.x + mascot.x + mascot.width / 2;
+    out property <length> mascot-cy: island.y + mascot.y + mascot.height / 2;
+    out property <bool> tucked: root.hidden && !root.ticker-active && !root.expanded;
+
+    callback poked();
+    callback media-prev();
+    callback media-toggle();
+    callback media-next();
+    callback seek(float);
+    callback source-picked(string);
+    callback title-tapped();
+    callback copy-clip(int);
+    callback clip-remove(int);
+    callback clip-pin(int);
+    callback clip-clear();
+    callback clip-filter-changed(int);
+    callback site-add();
+    callback site-open(int);
+    callback site-remove(int);
+    callback notifs-clear();
+    callback open-settings();
+    callback cal-step(int);
+    callback cal-reset();
+    callback quit-app();
+    callback close-island();
+    callback text-focus(bool);
+    callback timer-finished(int);
+    callback task-add(string);
+    callback task-toggle(int);
+    callback task-remove(int);
+    callback deck-action(int);
+    callback deck-slot(int);
+    callback deck-slot-remove(int);
+    callback tool(int);
+    callback optimize-memory();
+    callback bt-refresh();
+    callback weather-refresh();
+
+    public function show-ticker(message: string) {
+        root.ticker-app = "";
+        root.ticker-body = "";
+        root.ticker-text = message;
+        root.ticker-active = true;
+    }
+
+    public function show-toast(app: string, title: string, body: string) {
+        root.ticker-app = app == "" ? "NOTIFICATION" : app;
+        root.ticker-text = title;
+        root.ticker-body = body;
+        root.ticker-active = true;
+    }
+
+    pure function pad2(n: float) -> string {
+        return n < 10 ? "0\{Math.round(n)}" : "\{Math.round(n)}";
+    }
+
+    function f-reset() {
+        root.f-running = false;
+        root.f-left = (root.f-mode == 0 ? root.f-focus-min : root.f-break-min) * 60;
+    }
+    function f-set-mode(m: int) {
+        root.f-mode = m;
+        root.f-reset();
+    }
+    function f-adjust(which: int, d: int) {
+        if (which == 0) {
+            root.f-focus-min = Math.clamp(root.f-focus-min + d, 1, 120);
+        } else {
+            root.f-break-min = Math.clamp(root.f-break-min + d, 1, 60);
+        }
+        if (!root.f-running) {
+            root.f-reset();
+        }
+    }
+
+    property <float> tick: 0;
+    property <bool> toast: root.ticker-active && !root.expanded && root.ticker-app != "";
+    property <float> f-total: (root.f-mode == 0 ? root.f-focus-min : root.f-break-min) * 60;
+    property <float> f-frac: root.f-total > 0 ? 1 - root.f-left / root.f-total : 0;
+    property <string> f-text: "\{root.pad2(Math.floor(root.f-left / 60))}:\{root.pad2(Math.mod(root.f-left, 60))}";
+    property <string> idle-text: root.idle-mode == 1 ? (root.playing ? root.track-title : "")
+        : (root.idle-mode == 2 ? root.clock-time : "");
+    property <string> pill-text: root.ticker-active ? root.ticker-text
+        : ((root.spec-pill && root.spec-text != "") ? root.spec-text
+        : ((root.live-timer && root.f-running) ? root.f-text
+        : root.idle-text));
+    property <bool> pill-busy: root.pill-text != "";
+    property <[string]> tab-icons: [Icons.grid, Icons.music, Icons.sliders, QIcons.bluetooth, Icons.clip, Icons.coffee,
+        Icons.sun, Icons.activity, Icons.bell, Icons.globe, CalIcon.d, Icons.dots];
+
+    // corner sizes
+    property <length> r-big: root.corner-style == 0 ? 12px : (root.corner-style == 1 ? 28px : 36px);
+    property <length> r-small: root.corner-style == 0 ? 8px : (root.corner-style == 1 ? 14px : 999px);
+    property <length> rad: root.tucked ? 4px
+        : (root.expanded ? root.r-big
+        : (root.toast ? Math.min(root.r-big, 26px)
+        : Math.min(root.r-small, island.height / 2)));
+
+    Timer {
+        interval: root.toast ? root.toast-ms * 1ms : 2200ms;
+        running: root.ticker-active;
+        triggered => { root.ticker-active = false; }
+    }
+
+    Timer {
+        interval: 120ms;
+        running: true;
+        triggered => { root.tick = Math.mod(root.tick + 1, 28); }
+    }
+
+    Timer {
+        interval: 1000ms;
+        running: root.f-running;
+        triggered => {
+            root.f-left = root.f-left - 1;
+            if (root.f-left <= 0) {
+                root.f-running = false;
+                root.timer-finished(root.f-mode);
+                root.f-set-mode(1 - root.f-mode);
+            }
+        }
+    }
+
+    island := Rectangle {
+        width: root.tucked ? 118px
+            : (root.expanded ? root.open-w
+            : (root.toast ? 440px
+            : (root.pill-busy ? root.idle-w + 110px : root.idle-w)));
+        height: root.tucked ? 8px
+            : (root.expanded ? root.open-h
+            : (root.toast ? 88px : root.idle-h));
+        x: root.dock == 1 ? 0px : (root.dock == 2 ? root.width - self.width : (root.width - self.width) / 2);
+        y: root.tucked ? (root.shape == 0 ? 0px : -3px)
+            : (root.shape == 0 ? 0px : root.top-gap + (root.shape == 2 ? 6px : 0px));
+        background: Theme.surface;
+        border-top-left-radius: root.shape == 0 ? 0px : root.rad;
+        border-top-right-radius: root.shape == 0 ? 0px : root.rad;
+        border-bottom-left-radius: root.rad;
+        border-bottom-right-radius: root.rad;
+        border-width: root.tucked ? 0px : 1px;
+        border-color: Theme.border;
+        clip: true;
+
+        animate width { duration: 460ms / root.speed; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
+        animate height { duration: 460ms / root.speed; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
+        animate y { duration: 360ms / root.speed; easing: ease-out; }
+        animate background { duration: 300ms; }
+
+        // collapsed: text next to the mascot
+        Ticker {
+            x: 44px;
+            y: 0px;
+            width: parent.width - 58px;
+            height: root.idle-h;
+            text: root.pill-text;
+            shown: !root.expanded && !root.tucked && !root.toast;
+        }
+
+        // notification pop-up
+        if root.toast : Rectangle {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: parent.height;
+
+            Rectangle {
+                x: 16px;
+                y: 22px;
+                width: 44px;
+                height: 44px;
+                border-radius: 13px;
+                background: NotifColors.list[root.ticker-hue];
+
+                Text {
+                    width: parent.width;
+                    height: parent.height;
+                    text: root.ticker-letter;
+                    color: #ffffff;
+                    font-size: 20px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            Text {
+                x: 74px;
+                y: 14px;
+                width: parent.width - 120px;
+                height: 16px;
+                text: root.ticker-app + "  ·  now";
+                color: Theme.text-dim;
+                font-size: 10px;
+                font-weight: 700;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+            Text {
+                x: 74px;
+                y: 31px;
+                width: parent.width - 120px;
+                height: 22px;
+                text: root.ticker-text;
+                color: Theme.text;
+                font-size: 15px;
+                font-weight: 800;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+            Text {
+                x: 74px;
+                y: 54px;
+                width: parent.width - 120px;
+                height: 18px;
+                text: root.ticker-body;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+            Rectangle {
+                x: parent.width - 34px;
+                y: 10px;
+                width: 24px;
+                height: 24px;
+                border-radius: 12px;
+                background: tx.has-hover ? Theme.chip-active : transparent;
+
+                Icon {
+                    x: 5px;
+                    y: 5px;
+                    width: 14px;
+                    height: 14px;
+                    d: Icons.close;
+                    tint: Theme.text-dim;
+                }
+                tx := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.ticker-active = false; }
+                }
+            }
+        }
+
+        // ================= expanded =================
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: parent.height;
+            opacity: root.expanded ? 1 : 0;
+            visible: island.height > 80px;
+            animate opacity { duration: 220ms; }
+
+            // ----- header: tabs -----
+            Rectangle {
+                x: 58px;
+                y: 12px;
+                width: root.tab-ids.length * 32px + 8px;
+                height: 36px;
+                border-radius: 18px;
+                background: Theme.card;
+
+                for id[i] in root.tab-ids : IconTab {
+                    x: 4px + i * 32px;
+                    y: 3px;
+                    d: root.tab-icons[id];
+                    active: root.page == id;
+                    badge: id == 8 ? root.notif-unread : 0;
+                    clicked => { root.page = id; root.source-menu = false; }
+                }
+            }
+
+            // ----- header: right side -----
+            IconTab {
+                x: parent.width - 46px;
+                y: 15px;
+                d: Icons.close;
+                clicked => {
+                    if (root.pinned) {
+                        root.pinned = false;
+                    } else {
+                        root.close-island();
+                    }
+                }
+            }
+            IconTab {
+                x: parent.width - 78px;
+                y: 15px;
+                d: Icons.sliders;
+                clicked => { root.open-settings(); }
+            }
+            IconTab {
+                x: parent.width - 110px;
+                y: 15px;
+                d: Icons.pin;
+                active: root.pinned;
+                clicked => { root.pinned = !root.pinned; }
+            }
+
+            if root.spec-batt-present : Rectangle {
+                x: parent.width - 184px;
+                y: 15px;
+                width: 66px;
+                height: 30px;
+
+                Text {
+                    x: 0px;
+                    y: 0px;
+                    width: 40px;
+                    height: parent.height;
+                    text: "\{Math.round(root.spec-batt * 100)}%";
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 700;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+                Ring {
+                    x: 44px;
+                    y: 5px;
+                    width: 20px;
+                    height: 20px;
+                    value: root.spec-batt;
+                    tint: root.spec-charging ? #3fd16b : (root.spec-batt < 0.2 ? Theme.danger : Theme.accent);
+                }
+                if root.spec-charging : Icon {
+                    x: 49px;
+                    y: 10px;
+                    width: 10px;
+                    height: 10px;
+                    d: Icons.zap;
+                    tint: #3fd16b;
+                }
+            }
+            if root.weather-ready : Rectangle {
+                x: parent.width - (root.spec-batt-present ? 262px : 184px);
+                y: 15px;
+                width: 76px;
+                height: 30px;
+
+                WxIcon {
+                    x: 0px;
+                    y: 4px;
+                    width: 22px;
+                    height: 22px;
+                    kind: root.weather-kind;
+                }
+                Text {
+                    x: 26px;
+                    y: 0px;
+                    width: 50px;
+                    height: parent.height;
+                    text: root.weather-temp + "C";
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+            }
+            if root.open-w >= 760px : Text {
+                x: parent.width - (root.spec-batt-present ? 262px : 184px) - (root.weather-ready ? 74px : 0px) - 70px;
+                y: 15px;
+                width: 66px;
+                height: 30px;
+                text: root.clock-time;
+                color: Theme.text-dim;
+                font-size: 13px;
+                font-weight: 700;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+
+            // ----- pages -----
+            Rectangle {
+                x: 16px;
+                y: 60px;
+                width: parent.width - 32px;
+                height: parent.height - 76px;
+
+                // 0: home
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 0;
+                    HomePage {
+                        width: parent.width;
+                        height: parent.height;
+                        track-title: root.track-title;
+                        track-artist: root.track-artist;
+                        playing: root.playing;
+                        has-media: root.has-media;
+                        progress: root.progress;
+                        pos-text: root.pos-text;
+                        dur-text: root.dur-text;
+                        album-art: root.media-art;
+                        tint: root.media-ambient-color;
+                        tint-on: root.music-tint;
+                        show-art: root.show-art;
+                        show-progress: root.show-progress;
+                        progress-style: root.progress-style;
+                        bt-name: root.bt-name;
+                        bt-battery: root.bt-battery;
+                        cpu: root.spec-cpu;
+                        ram: root.spec-ram;
+                        down: root.spec-down;
+                        up: root.spec-up;
+                        prev => { root.media-prev(); }
+                        toggle => { root.media-toggle(); }
+                        next => { root.media-next(); }
+                        seek(f) => { root.seek(f); }
+                        title-tapped => { root.title-tapped(); }
+                        tool(n) => { root.tool(n); }
+                    }
+                }
+
+                // 1: music
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 1 && !root.source-menu;
+                    MusicPage {
+                        width: parent.width;
+                        height: parent.height;
+                        track-title: root.track-title;
+                        track-artist: root.track-artist;
+                        source-name: root.source-name;
+                        playing: root.playing;
+                        has-media: root.has-media;
+                        progress: root.progress;
+                        pos-text: root.pos-text;
+                        dur-text: root.dur-text;
+                        viz: root.viz;
+                        album-art: root.media-art;
+                        tint: root.media-ambient-color;
+                        tint-on: root.music-tint;
+                        show-art: root.show-art;
+                        show-progress: root.show-progress;
+                        progress-style: root.progress-style;
+                        viz-style: root.viz-style;
+                        viz-on: root.viz-on;
+                        prev => { root.media-prev(); }
+                        toggle => { root.media-toggle(); }
+                        next => { root.media-next(); }
+                        seek(f) => { root.seek(f); }
+                        source-tapped => { root.source-menu = true; }
+                        title-tapped => { root.title-tapped(); }
+                    }
+                }
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 1 && root.source-menu;
+                    SourcePicker {
+                        width: parent.width;
+                        height: parent.height;
+                        items: root.sources;
+                        picked(key) => { root.source-picked(key); }
+                        back => { root.source-menu = false; }
+                    }
+                }
+
+                // 2: quick settings
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 2;
+                    QuickSettings {
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                }
+
+                // 3: bluetooth
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 3;
+                    BluetoothPage {
+                        width: parent.width;
+                        height: parent.height;
+                        devices: root.bt-devices;
+                        refresh => { root.bt-refresh(); }
+                    }
+                }
+
+                // 4: clipboard
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 4;
+                    ClipboardPage {
+                        width: parent.width;
+                        height: parent.height;
+                        clips: root.clips;
+                        filter <=> root.clip-filter;
+                        picked(id) => { root.copy-clip(id); }
+                        removed(id) => { root.clip-remove(id); }
+                        pin-toggled(id) => { root.clip-pin(id); }
+                        cleared => { root.clip-clear(); }
+                        filter-changed(f) => { root.clip-filter-changed(f); }
+                    }
+                }
+
+                // 5: focus
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 5;
+                    FocusPage {
+                        width: parent.width;
+                        height: parent.height;
+                        mode: root.f-mode;
+                        time-text: root.f-text;
+                        frac: root.f-frac;
+                        running: root.f-running;
+                        focus-min: root.f-focus-min;
+                        break-min: root.f-break-min;
+                        tasks: root.tasks;
+                        tasks-done: root.tasks-done;
+                        set-mode(m) => { root.f-set-mode(m); }
+                        toggle => { root.f-running = !root.f-running; }
+                        reset => { root.f-reset(); }
+                        adjust(w, d) => { root.f-adjust(w, d); }
+                        task-add(t) => { root.task-add(t); }
+                        task-toggle(i) => { root.task-toggle(i); }
+                        task-remove(i) => { root.task-remove(i); }
+                        input-focus(on) => { root.typing = on; root.text-focus(on); }
+                    }
+                }
+
+                // 6: weather
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 6;
+                    WeatherPage {
+                        width: parent.width;
+                        height: parent.height;
+                        ready: root.weather-ready;
+                        city: root.weather-city;
+                        temp: root.weather-temp;
+                        desc: root.weather-desc;
+                        hilo: root.weather-hilo;
+                        humidity: root.weather-humidity;
+                        wind: root.weather-wind;
+                        rain: root.weather-rain;
+                        sunset: root.weather-sunset;
+                        kind: root.weather-kind;
+                        hours: root.weather-hours;
+                        days: root.weather-days;
+                        refresh => { root.weather-refresh(); }
+                    }
+                }
+
+                // 7: system
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 7;
+                    SystemPage {
+                        width: parent.width;
+                        height: parent.height;
+                        cpu: root.spec-cpu;
+                        ram: root.spec-ram;
+                        ram-text: root.spec-ram-text;
+                        ram-total: root.spec-ram-total;
+                        down: root.spec-down;
+                        up: root.spec-up;
+                        batt: root.spec-batt;
+                        batt-present: root.spec-batt-present;
+                        charging: root.spec-charging;
+                        storage-text: root.spec-storage-text;
+                        storage-total: root.spec-storage-total;
+                        storage-used: root.spec-storage-used;
+                        uptime: root.spec-uptime;
+                        hist: root.spec-hist;
+                        optimize => { root.optimize-memory(); }
+                    }
+                }
+
+                // 8: notifications
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 8;
+                    NotifList {
+                        width: parent.width;
+                        height: parent.height;
+                        items: root.notifs;
+                        clear => { root.notifs-clear(); }
+                    }
+                }
+
+                // 9: sites
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 9;
+                    SiteGrid {
+                        width: parent.width;
+                        height: parent.height;
+                        sites: root.sites;
+                        opened(i) => { root.site-open(i); }
+                        removed(i) => { root.site-remove(i); }
+                        add-requested => { root.site-add(); }
+                    }
+                }
+
+                // 10: calendar
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 10;
+                    CalendarView {
+                        width: parent.width;
+                        height: parent.height;
+                        cells: root.cal-cells;
+                        title: root.cal-title;
+                        today-day: root.cal-today-day;
+                        today-name: root.cal-today-name;
+                        step(d) => { root.cal-step(d); }
+                        go-today => { root.cal-reset(); }
+                    }
+                }
+
+                // 11: deck
+                Page {
+                    width: parent.width;
+                    height: parent.height;
+                    active: root.page == 11;
+                    DeckPage {
+                        width: parent.width;
+                        height: parent.height;
+                        slots: root.deck-slots;
+                        action(n) => { root.deck-action(n); }
+                        slot-clicked(i) => { root.deck-slot(i); }
+                        slot-removed(i) => { root.deck-slot-remove(i); }
+                    }
+                }
+            }
+        }
+
+        // our little friend
+        mascot := MascotView {
+            x: root.expanded ? 16px : 10px;
+            y: root.expanded ? 14px : (root.idle-h - 26px) / 2;
+            width: root.expanded ? 32px : 26px;
+            height: self.width;
+            opacity: (root.tucked || root.toast || (root.idle-mode == 3 && !root.pill-busy && !root.expanded)) ? 0 : 1;
+            look-x: root.look-x;
+            look-y: root.look-y;
+            mood: root.mood;
+            blinking: root.tick == 0;
+            poked => { root.poked(); }
+
+            animate x { duration: 460ms / root.speed; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
+            animate y { duration: 460ms / root.speed; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
+            animate width { duration: 460ms / root.speed; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
+            animate opacity { duration: 160ms; }
+        }
+    }
+}
